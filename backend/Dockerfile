@@ -22,10 +22,10 @@ FROM debian:bullseye-slim
 RUN apt-get update && apt-get install -y libssl-dev ca-certificates && apt-get clean
 
 # Copy from builder
-COPY --from=builder /app/target/release/photoencoder /usr/local/bin/photoencoder
+COPY --from=builder /app/target/release/backend /usr/local/bin/backend
 
 # Expose web port
 EXPOSE 8080
 
 # Start app
-CMD ["photoencoder"]
+CMD ["backend"]
