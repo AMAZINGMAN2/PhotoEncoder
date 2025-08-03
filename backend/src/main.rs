@@ -9,7 +9,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .configure(handlers::init_routes)
     })
-    .bind(("0.0.0.0", 3001))?
+    .bind(("0.0.0.0", 8080))?
     .run()
     .await
 }
