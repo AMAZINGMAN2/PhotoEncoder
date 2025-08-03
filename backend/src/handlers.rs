@@ -17,11 +17,11 @@ pub fn init_routes(cfg: &mut web::ServiceConfig) {
 async fn encode_handler(mut payload: Multipart) -> Result<HttpResponse, Error> {
     let mut img_bytes = None;
     let mut secret_bytes = None;
+    let mut password_bytes = None;
 
     while let Some(field) = payload.next().await {
         let mut field = field?;
-        
-        // Extract name early to avoid borrow conflicts
+
         let name = field
             .content_disposition()
             .get_name()
@@ -34,10 +34,11 @@ async fn encode_handler(mut payload: Multipart) -> Result<HttpResponse, Error> {
             data.extend_from_slice(&chunk);
         }
 
-        if name == "image" {
-            img_bytes = Some(data.freeze());
-        } else if name == "secret" {
-            secret_bytes = Some(data.freeze());
+        match name.as_str() {
+            "image" => img_bytes = Some(data.freeze()),
+            "secret" => secret_bytes = Some(data.freeze()),
+            "password" => password_bytes = Some(data.freeze()),
+            _ => {}
         }
     }
 
@@ -50,7 +51,9 @@ async fn encode_handler(mut payload: Multipart) -> Result<HttpResponse, Error> {
         None => return Ok(HttpResponse::BadRequest().body("Missing secret data")),
     };
 
-    match stego::encode_image(&img_bytes, &secret_bytes) {
+    let password_opt = password_bytes.as_ref().map(|b| b.as_ref());
+
+    match stego::encode_image(&img_bytes, &secret_bytes, password_opt) {
         Ok(encoded_img_bytes) => Ok(HttpResponse::Ok()
             .content_type("image/png")
             .body(encoded_img_bytes)),
@@ -60,6 +63,7 @@ async fn encode_handler(mut payload: Multipart) -> Result<HttpResponse, Error> {
 
 async fn decode_handler(mut payload: Multipart) -> Result<HttpResponse, Error> {
     let mut img_bytes = None;
+    let mut password_bytes = None;
 
     while let Some(field) = payload.next().await {
         let mut field = field?;
@@ -70,13 +74,16 @@ async fn decode_handler(mut payload: Multipart) -> Result<HttpResponse, Error> {
             .map(|n| n.to_string())
             .unwrap_or_default();
 
-        if name == "image" {
-            let mut data = BytesMut::new();
-            while let Some(chunk) = field.next().await {
-                let chunk = chunk?;
-                data.extend_from_slice(&chunk);
-            }
-            img_bytes = Some(data.freeze());
+        let mut data = BytesMut::new();
+        while let Some(chunk) = field.next().await {
+            let chunk = chunk?;
+            data.extend_from_slice(&chunk);
+        }
+
+        match name.as_str() {
+            "image" => img_bytes = Some(data.freeze()),
+            "password" => password_bytes = Some(data.freeze()),
+            _ => {}
         }
     }
 
@@ -85,7 +92,9 @@ async fn decode_handler(mut payload: Multipart) -> Result<HttpResponse, Error> {
         None => return Ok(HttpResponse::BadRequest().body("Missing image file")),
     };
 
-    match stego::decode_image(&img_bytes) {
+    let password_opt = password_bytes.as_ref().map(|b| b.as_ref());
+
+    match stego::decode_image(&img_bytes, password_opt) {
         Ok(secret) => Ok(HttpResponse::Ok()
             .content_type("application/octet-stream")
             .body(secret)),
