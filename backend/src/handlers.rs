@@ -98,6 +98,6 @@ async fn decode_handler(mut payload: Multipart) -> Result<HttpResponse, Error> {
         Ok(secret) => Ok(HttpResponse::Ok()
             .content_type("application/octet-stream")
             .body(secret)),
-        Err(e) => Ok(HttpResponse::InternalServerError().body(format!("Decoding error: {}", e))),
+        Err(_e) => Ok(HttpResponse::InternalServerError().body(format!("Incorrect Password"))),
     }
 }

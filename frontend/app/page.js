@@ -75,16 +75,16 @@ export default function Home() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-6">
-      <h1 className="text-4xl mb-8 font-semibold">PhotoEncoder</h1>
-
+      <h1 className="text-8xl mt-[-15rem] mb-8 font-semibold">Photo <span className="bg-gradient-to-r from-pink-600 via-violet-700 to-purple-800 text-transparent bg-clip-text">Encoder</span></h1>
+      <h2 className="text-xl mb-4">Select mode</h2>
       <div className="mb-6 flex space-x-4">
         <button
           onClick={() => setMode("encode")}
           disabled={mode === "encode"}
           className={`px-6 py-2 rounded ${
             mode === "encode"
-              ? "bg-gray-700 cursor-default"
-              : "bg-blue-600 hover:bg-blue-700"
+              ? "bg-green-600"
+              : "bg-gray-700 hover:bg-gray-800 cursor-pointer"
           }`}
         >
           Encode
@@ -94,8 +94,8 @@ export default function Home() {
           disabled={mode === "decode"}
           className={`px-6 py-2 rounded ${
             mode === "decode"
-              ? "bg-gray-700 cursor-default"
-              : "bg-green-600 hover:bg-green-700"
+              ? "bg-green-600"
+              : "bg-gray-700 hover:bg-gray-800 cursor-pointer"
           }`}
         >
           Decode
@@ -104,7 +104,7 @@ export default function Home() {
 
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-4 w-full max-w-sm"
+        className="flex flex-col gap-4 w-full max-w-sm mt-[4rem] "
       >
         <input
           type="file"

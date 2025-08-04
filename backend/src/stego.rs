@@ -26,8 +26,10 @@ fn encrypt_secret(secret: &[u8], password: &[u8]) -> Result<Vec<u8>, String> {
     let ciphertext = cipher.encrypt(nonce, secret)
         .map_err(|e| format!("Encryption error: {:?}", e))?;
 
-    let mut encrypted_data = nonce_bytes.to_vec();
-    encrypted_data.extend(ciphertext);
+
+    let mut encrypted_data = b"ENC!".to_vec(); // 4-byte magic header
+    encrypted_data.extend_from_slice(&nonce_bytes);
+    encrypted_data.extend_from_slice(&ciphertext);
 
     Ok(encrypted_data)
 }
@@ -177,9 +179,14 @@ pub fn decode_image(img_bytes: &[u8], password: Option<&[u8]>) -> Result<Vec<u8>
         secret.push(byte);
     }
 
-    // If password provided, decrypt; else return raw secret
-    if let Some(pw) = password {
-        decrypt_secret(&secret, pw)
+
+    // Auto-detect if encrypted
+    if secret.starts_with(b"ENC!") {
+        if let Some(pw) = password {
+            decrypt_secret(&secret[4..], pw)
+        } else {
+            Err("This image contains encrypted data but no password was provided.".into())
+        }
     } else {
         Ok(secret)
     }
