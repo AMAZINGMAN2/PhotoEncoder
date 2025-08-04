@@ -11,7 +11,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(
                 Cors::default()
-                    .allow_any_origin()  // For dev only! In production, replace with `.allowed_origin("https://your-frontend-domain")`
+                    .allowed_origin("https://photoencoder.pages.dev/")`
                     .allow_any_method()
                     .allow_any_header()
                     .max_age(3600),
