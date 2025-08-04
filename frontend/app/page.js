@@ -1,101 +1,181 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+
+const API_BASE = "https://photoencoder-production.up.railway.app";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [imageFile, setImageFile] = useState(null);
+  const [secretText, setSecretText] = useState("");
+  const [password, setPassword] = useState("");
+  const [resultUrl, setResultUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState("encode"); // "encode" or "decode"
+  const [error, setError] = useState(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    setResultUrl(null);
+
+    if (!imageFile) {
+      setError("Please upload an image file");
+      setLoading(false);
+      return;
+    }
+    if (mode === "encode" && !secretText.trim()) {
+      setError("Please enter secret text to encode");
+      setLoading(false);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", imageFile);
+
+    if (mode === "encode") {
+      // convert secret text to bytes and append as a Blob with filename and type
+      const secretBlob = new Blob([secretText], { type: "text/plain" });
+      formData.append("secret", secretBlob, "secret.txt");
+    }
+
+    if (password.trim()) {
+      formData.append("password", password);
+    }
+
+    try {
+      const endpoint = mode === "encode" ? "/encode" : "/decode";
+
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Server error");
+      }
+
+      if (mode === "encode") {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        setResultUrl(url);
+      } else {
+        const blob = await res.blob();
+        const text = await blob.text();
+        setResultUrl(null);
+        alert("Decoded secret:\n" + text);
+      }
+    } catch (err) {
+      setError(err.message || "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-6">
+      <h1 className="text-4xl mb-8 font-semibold">PhotoEncoder</h1>
+
+      <div className="mb-6 flex space-x-4">
+        <button
+          onClick={() => setMode("encode")}
+          disabled={mode === "encode"}
+          className={`px-6 py-2 rounded ${
+            mode === "encode"
+              ? "bg-gray-700 cursor-default"
+              : "bg-blue-600 hover:bg-blue-700"
+          }`}
+        >
+          Encode
+        </button>
+        <button
+          onClick={() => setMode("decode")}
+          disabled={mode === "decode"}
+          className={`px-6 py-2 rounded ${
+            mode === "decode"
+              ? "bg-gray-700 cursor-default"
+              : "bg-green-600 hover:bg-green-700"
+          }`}
+        >
+          Decode
+        </button>
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-4 w-full max-w-sm"
+      >
+        <input
+          type="file"
+          accept="image/png, image/jpeg"
+          onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+          className="file:cursor-pointer file:bg-gray-800 file:text-white file:px-4 file:py-2 rounded"
+          required
+        />
+
+        {mode === "encode" && (
+          <textarea
+            placeholder="Secret text to encode"
+            value={secretText}
+            onChange={(e) => setSecretText(e.target.value)}
+            rows={5}
+            className="resize-none p-2 rounded text-black"
+            required={mode === "encode"}
+          />
+        )}
+
+        <input
+          type="password"
+          placeholder="Password (optional)"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="off"
+          className="px-4 py-2 rounded text-black"
+        />
+
+        <button
+          type="submit"
+          disabled={loading}
+          className={`py-2 rounded font-semibold ${
+            loading
+              ? "bg-gray-600 cursor-not-allowed"
+              : mode === "encode"
+              ? "bg-blue-600 hover:bg-blue-700"
+              : "bg-green-600 hover:bg-green-700"
+          }`}
+        >
+          {loading
+            ? mode === "encode"
+              ? "Encoding..."
+              : "Decoding..."
+            : mode === "encode"
+            ? "Encode"
+            : "Decode"}
+        </button>
+      </form>
+
+      {error && (
+        <p className="mt-6 text-red-500 whitespace-pre-wrap">{error}</p>
+      )}
+
+      {resultUrl && mode === "encode" && (
+        <div className="mt-8 flex flex-col items-center">
+          <p className="mb-4 text-lg font-medium">Encoded Image:</p>
+          <img
+            src={resultUrl}
+            alt="Encoded Result"
+            className="max-w-full max-h-80 border border-white rounded"
+          />
           <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href={resultUrl}
+            download="encoded.png"
+            className="mt-3 text-blue-400 hover:underline"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
+            Download Encoded Image
           </a>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      )}
+    </main>
   );
 }
