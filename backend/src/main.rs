@@ -11,7 +11,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(
                 Cors::default()
-                    .allowed_origin("https://photoencoder.pages.dev/")`
+                    .allowed_origin("https://photoencoder.pages.dev/")
                     .allow_any_method()
                     .allow_any_header()
                     .max_age(3600),
